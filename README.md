@@ -18,7 +18,7 @@
 - **配置驱动**：私人路径（灵魂文件、记忆、日记目录）全部外置到 `config.yaml`
 - **自动初始化**：首次使用时自动探测环境路径
 - **1080px 标准**：生成宽度精确 1080px、高度自适应的图片
-- **三级兜底**：浏览器截图 → Chrome headless → Python PIL 绘图
+- **三级兜底**：Playwright（推荐）→ Chrome headless → Python PIL 绘图
 
 ## Installation / 安装
 
