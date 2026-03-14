@@ -83,11 +83,15 @@ description: 个人日记自动化 skill。一键执行：自动检测配置 →
 必须读取：
 - `soul_path`（灵魂定义）
 - `daily_memory_dir/YYYY-MM-DD.md`（当日事件，按 `daily_memory_pattern`）
-- `diary_text_dir` 下最近 7 天日记（保持风格一致性）
+- `diary_text_dir` 下最近 7 天日记（保持风格一致性，同时**避免重复相同句式和段落结构**）
+
+建议读取：
+- `memory_root_path`（长期记忆）
+- `<workspace_dir>/IDENTITY.md`（身份定义，若存在）
 
 可选读取：
-- `memory_root_path`（长期记忆）
 - `news_summary_dir` 下最近 7 天简报（若目录存在）
+- `daily_memory_dir` 下当天所有相关文件（如 `YYYY-MM-DD-*.md`）
 
 ### Step 4: 写作
 
@@ -124,26 +128,58 @@ description: 个人日记自动化 skill。一键执行：自动检测配置 →
 
 ### Step 5: 生成图片
 
+#### 5.1 生成 HTML
+
+使用 skill 目录下的 `diary-template.html` 模板：
+- 读取模板文件
+- 将日记 markdown 转为 HTML 片段（`#` → `<h1>`，空行 → `<p class="spacer">`，正文 → `<p>`）
+- 替换模板中的 `{{CONTENT}}` 占位符
+- 保存为 `<diary_text_dir>/diary-YYYY-MM-DD.html`
+
+#### 5.2 截图
+
 规格：
-- 宽度 = `output.image_width`（像素精确值）
-- 高度自适应内容
+- 最终输出宽度 = `output.image_width`（像素精确值，默认 1080）
+- 高度自适应内容（fullPage，不留白）
+- 清晰度：2x 渲染（deviceScaleFactor=2）
 
 方案优先级：
-1. **Option A**: Playwright（推荐，fullPage + deviceScaleFactor=2，清晰度高且高度自适应）
-2. **Option B**: Chrome headless 截图（force-device-scale-factor=2）
-3. **Option C**: Python PIL 绘制（最终兜底）
+1. **Option A**: Playwright（推荐）
+2. **Option B**: Chrome headless
+3. **Option C**: Python PIL（最终兜底）
 
-Playwright 方案示例：
+**Playwright 方案（推荐）**：
 ```js
 const { chromium } = require('playwright');
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 540, height: 800 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({
+  viewport: { width: 1080, height: 800 },
+  deviceScaleFactor: 2
+});
 await page.goto('file:///<html_path>');
 await page.waitForLoadState('networkidle');
 await page.screenshot({ path: '<output_path>', fullPage: true });
 await browser.close();
 ```
-截图后执行 `sips --resampleWidth <image_width>` 确保宽度精确，再用 `sips -g pixelWidth -g pixelHeight` 校验。
+
+**Chrome headless 方案（备选）**：
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless --disable-gpu --hide-scrollbars \
+  --force-device-scale-factor=2 \
+  --window-size=1080,<estimated_height> \
+  --screenshot=<output_path> \
+  file://<html_path>
+```
+
+#### 5.3 宽度校验与修正
+
+截图后必须执行：
+```bash
+sips --resampleWidth <image_width> <output_path>
+sips -g pixelWidth -g pixelHeight <output_path>
+```
+确认宽度精确等于 `image_width`。若不符，重新 resample。
 
 输出：`<diary_text_dir>/diary-YYYY-MM-DD.png`
 
@@ -162,7 +198,7 @@ await browser.close();
 - **必须**: SOUL.md（用于写作风格）
 - **建议**: MEMORY.md、每日 memory 文件
 - **可选**: 新闻简报目录（用于素材扩展）
-- **工具**: browser（优先）或 sips（图片处理）
+- **图片生成**: Playwright（推荐）或 Chrome headless + sips（macOS）
 
 ---
 
@@ -172,5 +208,6 @@ await browser.close();
 xiaoshan-journal/
 ├── SKILL.md              # 本文件（入口）
 ├── config.template.yaml  # 配置模板
-└── config.yaml           # 实际配置（初始化后生成）
+├── diary-template.html   # 图片渲染 HTML 模板
+└── config.yaml           # 实际配置（初始化后生成，gitignore）
 ```
