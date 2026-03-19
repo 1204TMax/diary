@@ -154,7 +154,7 @@ const { chromium } = require('playwright');
 const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1080, height: 800 },
-  deviceScaleFactor: 2
+  deviceScaleFactor: 3
 });
 await page.goto('file:///<html_path>');
 await page.waitForLoadState('networkidle');
